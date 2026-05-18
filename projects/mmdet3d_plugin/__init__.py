@@ -1,3 +1,4 @@
+from importlib.util import find_spec
 import warnings
 
 from .core.bbox.assigners.hungarian_assigner_3d import HungarianAssigner3D
@@ -14,16 +15,20 @@ from .models.opt.adamw import AdamW2
 from .models.utils import *
 from .bevformer import *
 
-try:
-    from .dd3d import *
-except ModuleNotFoundError as exc:
+_DD3D_OPTIONAL_DEPS = ('detectron2', 'fvcore', 'nuscenes', 'pyquaternion',
+                       'seaborn')
+_MISSING_DD3D_DEPS = [dep for dep in _DD3D_OPTIONAL_DEPS
+                      if find_spec(dep) is None]
+
+if _MISSING_DD3D_DEPS:
     # DD3D depends on additional third-party packages (for example detectron2).
     # Keep the top-level plugin import working when those extras are absent so
     # the standard BEVFormer training entrypoints can still start.
-    if exc.name is None or exc.name.startswith('projects.mmdet3d_plugin.dd3d'):
-        raise
     warnings.warn(
-        f'Skipping DD3D plugin imports because optional dependency "{exc.name}" '
-        'is not installed. Install the DD3D extras to use bevformerv2 configs.',
+        'Skipping DD3D plugin imports because optional dependencies are not '
+        f'available: {", ".join(_MISSING_DD3D_DEPS)}. Install the DD3D extras '
+        'to use BEVFormer V2 configs.',
         RuntimeWarning,
     )
+else:
+    from .dd3d import *
